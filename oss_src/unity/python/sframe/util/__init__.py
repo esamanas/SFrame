@@ -12,8 +12,7 @@ import logging.config
 import time as _time
 import tempfile as _tempfile
 import os as _os
-from Queue import Queue as queue
-from queue_channel import QueueHandler, MutableQueueListener
+from .queue_channel import QueueHandler, MutableQueueListener
 
 import urllib as _urllib
 import os as _os
@@ -21,13 +20,20 @@ import re as _re
 from zipfile import ZipFile as _ZipFile
 import bz2 as _bz2
 import tarfile as _tarfile
-import ConfigParser as _ConfigParser
 import itertools as _itertools
 import uuid as _uuid
 import datetime as _datetime
 import time as _time
 import logging as _logging
 
+try:
+    from queue import Queue as queue
+except ImportError:
+    from Queue import Queue as queue
+try:
+    import configparser as _ConfigParser
+except ImportError:
+    import ConfigParser as _ConfigParser
 
 __LOGGER__ = _logging.getLogger(__name__)
 # overuse the same logger so we have one logging config
@@ -254,26 +260,26 @@ def _download_dataset(url_str, extract=True, force=False, output_dir="."):
     fname = output_dir + "/" + url_str.split("/")[-1]
     #download the file from the web
     if not _os.path.isfile(fname) or force:
-        print "Downloading file from: ", url_str
+        print("Downloading file from:", url_str)
         _urllib.urlretrieve(url_str, fname)
         if extract and fname[-3:] == "zip":
-            print "Decompressing zip archive", fname
+            print("Decompressing zip archive", fname)
             _ZipFile(fname).extractall(output_dir)
         elif extract and fname[-6:] == ".tar.gz":
-            print "Decompressing tar.gz archive", fname
+            print("Decompressing tar.gz archive", fname)
             _tarfile.TarFile(fname).extractall(output_dir)
         elif extract and fname[-7:] == ".tar.bz2":
-            print "Decompressing tar.bz2 archive", fname
+            print("Decompressing tar.bz2 archive", fname)
             _tarfile.TarFile(fname).extractall(output_dir)
         elif extract and fname[-3:] == "bz2":
-            print "Decompressing bz2 archive: ", fname
+            print("Decompressing bz2 archive:", fname)
             outfile = open(fname.split(".bz2")[0], "w")
-            print "Output file: ", outfile
+            print("Output file:", outfile)
             for line in _bz2.BZ2File(fname, "r"):
                 outfile.write(line)
             outfile.close()
     else:
-        print "File is already downloaded."
+        print("File is already downloaded.")
 
 def is_directory_archive(path):
     """
@@ -537,7 +543,7 @@ def crossproduct(d):
     from .. import connect as _mt
     _mt._get_metric_tracker().track('util.crossproduct')
     from .. import SArray
-    d = [zip(d.keys(), x) for x in _itertools.product(*d.values())]
+    d = [list(zip(list(d.keys()), x)) for x in _itertools.product(*list(d.values()))]
     sa = [{k:v for (k,v) in x} for x in d]
     return SArray(sa).unpack(column_name_prefix='')
 
@@ -631,9 +637,9 @@ def _assert_sframe_equal(sf1,
 
     names_to_check = None
     if check_column_names:
-      names_to_check = zip(sorted_s1_names, sorted_s2_names)
+      names_to_check = list(zip(sorted_s1_names, sorted_s2_names))
     else:
-      names_to_check = zip(s1_names, s2_names)
+      names_to_check = list(zip(s1_names, s2_names))
     for i in names_to_check:
         if sf1[i[0]].dtype() != sf2[i[1]].dtype():
           raise AssertionError("Columns " + str(i) + " types mismatched.")
@@ -732,7 +738,7 @@ def _pickle_to_temp_location_or_memory(obj):
         the directory name. This directory will not have lifespan greater than
         that of unity_server.
         '''
-        import cloudpickle as cloudpickle
+        from . import cloudpickle as cloudpickle
         try:
             # try cloudpickle first and see if that works
             lambda_str = cloudpickle.dumps(obj)
@@ -775,7 +781,7 @@ def _raise_error_if_not_of_type(arg, expected_type, arg_name = None):
                         ' or '.join([x.__name__ for x in lst_expected_type]))
     err_msg += "(not %s)." % type(arg).__name__
     if not any(map(lambda x: isinstance(arg, x), lst_expected_type)):
-      raise TypeError, err_msg
+      raise TypeError(err_msg)
 
 def _raise_error_if_not_function(arg, arg_name=None):
     """
@@ -798,5 +804,5 @@ def _raise_error_if_not_function(arg, arg_name=None):
     display_name = '%s ' % arg_name if arg_name is not None else ""
     err_msg = "Argument %smust be a function." % display_name
     if not hasattr(arg, '__call__'):
-      raise TypeError, err_msg
+      raise TypeError(err_msg)
 

@@ -81,11 +81,11 @@ SPARK_SUPPORT_NAMES = {'RDD_JAR_PATH': 'spark_unity.jar'}
 
 first = True
 for i in SFRAME_ROOTS:
-    for key,val in SPARK_SUPPORT_NAMES.iteritems():
+    for key,val in SPARK_SUPPORT_NAMES.items():
         tmp_path = os.path.join(i, val)
         if key not in BINARY_PATHS and os.path.isfile(tmp_path):
             BINARY_PATHS[key] = tmp_path
-    if all(name in BINARY_PATHS for name in SPARK_SUPPORT_NAMES.keys()):
+    if all(name in BINARY_PATHS for name in list(SPARK_SUPPORT_NAMES.keys())):
         if first:
             PRODUCTION_RUN = True
         break
@@ -161,7 +161,7 @@ def __rdd_support_init__(sprk_ctx,graphlab_util_ref):
         # Actually create the staging dir
         unity = glconnect.get_unity()
         unity.__mkdir__(STAGING_DIR)
-        unity.__chmod__(STAGING_DIR, 0777)
+        unity.__chmod__(STAGING_DIR, 0o777)
     elif sprk_ctx.master[0:5] == 'local':
         # Save the output sframes to the same temp workspace this engine is
         # using
@@ -793,8 +793,8 @@ class SFrame(object):
                     elif data.endswith(('.tsv', '.tsv.gz')):
                         _format = 'tsv'
                     elif data.endswith(('.txt', '.txt.gz')):
-                        print "Assuming file is csv. For other delimiters, " + \
-                            "please use `SFrame.read_csv`."
+                        print("Assuming file is csv. For other delimiters, " + \
+                            "please use `SFrame.read_csv`.")
                         _format = 'csv'
                     else:
                         _format = 'sframe'
@@ -875,21 +875,21 @@ class SFrame(object):
     @staticmethod
     def _infer_column_types_from_lines(first_rows):
         if (len(first_rows.column_names()) < 1):
-          print "Insufficient number of columns to perform type inference"
+          print("Insufficient number of columns to perform type inference")
           raise RuntimeError("Insufficient columns ")
         if len(first_rows) < 1:
-          print "Insufficient number of rows to perform type inference"
+          print("Insufficient number of rows to perform type inference")
           raise RuntimeError("Insufficient rows")
         # gets all the values column-wise
         all_column_values_transposed = [list(first_rows[col])
                 for col in first_rows.column_names()]
         # transpose
-        all_column_values = [list(x) for x in zip(*all_column_values_transposed)]
+        all_column_values = [list(x) for x in list(zip(*all_column_values_transposed))]
         all_column_type_hints = [[type(t) for t in vals] for vals in all_column_values]
         # collect the hints
         # if every line was inferred to have a different number of elements, die
         if len(set(len(x) for x in all_column_type_hints)) != 1:
-            print "Unable to infer column types. Defaulting to str"
+            print("Unable to infer column types. Defaulting to str")
             return str
 
         import types
@@ -912,7 +912,7 @@ class SFrame(object):
               column_type_hints[j] = list
             elif types.NoneType in d:
               # one is a NoneType. assign to other type
-              if currow[j] != types.NoneType:
+              if currow[j] != types(NoneType):
                   column_type_hints[j] = currow[j]
             else:
               column_type_hints[j] = str
@@ -1026,13 +1026,13 @@ class SFrame(object):
                 column_type_hints = SFrame._infer_column_types_from_lines(first_rows)
                 typelist = '[' + ','.join(t.__name__ for t in column_type_hints) + ']'
                 if verbose != False:
-                    print "------------------------------------------------------"
-                    print "Inferred types from first line of file as "
-                    print "column_type_hints="+ typelist
-                    print "If parsing fails due to incorrect types, you can correct"
-                    print "the inferred type list above and pass it to read_csv in"
-                    print "the column_type_hints argument"
-                    print "------------------------------------------------------"
+                    print("------------------------------------------------------")
+                    print("Inferred types from first line of file as ")
+                    print("column_type_hints="+ typelist)
+                    print("If parsing fails due to incorrect types, you can correct")
+                    print("the inferred type list above and pass it to read_csv in")
+                    print( "the column_type_hints argument")
+                    print("------------------------------------------------------")
                 column_type_inference_was_used = True
             except RuntimeError as e:
                 if type(e) == RuntimeError and ("cancel" in e.message or "Cancel" in e.message):
@@ -1040,12 +1040,12 @@ class SFrame(object):
                 # If the above fails, default back to str for all columns.
                 column_type_hints = str
                 if verbose != False:
-                    print 'Could not detect types. Using str for each column.'
+                    print('Could not detect types. Using str for each column.')
 
         if type(column_type_hints) is type:
             type_hints = {'__all_columns__': column_type_hints}
         elif type(column_type_hints) is list:
-            type_hints = dict(zip(['__X%d__' % i for i in range(len(column_type_hints))], column_type_hints))
+            type_hints = dict(list(zip(['__X%d__' % i for i in range(len(column_type_hints))], column_type_hints)))
         elif type(column_type_hints) is dict:
             # we need to fill in a potentially incomplete dictionary
             try:
@@ -1066,7 +1066,7 @@ class SFrame(object):
                                  verbose=verbose)
                 inferred_types = SFrame._infer_column_types_from_lines(first_rows)
                 # make a dict of column_name to type
-                inferred_types = dict(zip(first_rows.column_names(), inferred_types))
+                inferred_types = dict(list(zip(first_rows.column_names(), inferred_types)))
                 # overwrite with the user's specified types
                 for key in column_type_hints:
                     inferred_types[key] = column_type_hints[key]
@@ -1076,7 +1076,7 @@ class SFrame(object):
                     raise e
                 # If the above fails, default back to str for unmatched columns
                 if verbose != False:
-                    print 'Could not detect types. Using str for all unspecified columns.'
+                    print('Could not detect types. Using str for all unspecified columns.')
             type_hints = column_type_hints
         else:
             raise TypeError("Invalid type for column_type_hints. Must be a dictionary, list or a single type.")
@@ -1102,8 +1102,8 @@ class SFrame(object):
             if column_type_inference_was_used:
                 # try again
                 if verbose != False:
-                    print "Unable to parse the file with automatic type inference."
-                    print "Defaulting to column_type_hints=str"
+                    print("Unable to parse the file with automatic type inference.")
+                    print("Defaulting to column_type_hints=str")
                 type_hints = {'__all_columns__': str}
                 try:
                     with cython_context():
@@ -1789,7 +1789,7 @@ class SFrame(object):
         tmp_loc = self.__get_staging_dir__(sc,graphlab_util_ref)
         sf_loc = os.path.join(tmp_loc, str(uuid.uuid4()))
         self.save(sf_loc)
-        print sf_loc
+        print(sf_loc)
         # Keep track of the temporary sframe that is saved(). We need to delete it eventually.
         dummysf = load_sframe(sf_loc)
         dummysf.__proxy__.delete_on_close()
@@ -2675,10 +2675,10 @@ class SFrame(object):
                     types.add(tuple([type(v) for v in row]))
 
             if len(types) == 0:
-                raise TypeError, \
+                raise TypeError(
                     "Could not infer output column types from the first ten rows " +\
                     "of the SFrame. Please use the 'column_types' parameter to " +\
-                    "set the types."
+                    "set the types.")
 
             if len(types) > 1:
                 raise TypeError("Mapped rows must have the same length and types")
@@ -2970,7 +2970,7 @@ class SFrame(object):
             line_terminator = kwargs['lineterminator']
             del kwargs['lineterminator']
         if len(kwargs) > 0:
-            raise TypeError("Unexpected keyword arguments " + str(kwargs.keys()))
+            raise TypeError("Unexpected keyword arguments " + str(list(kwargs.keys())))
 
         write_csv_options = {}
         write_csv_options['delimiter'] = delimiter
@@ -3204,7 +3204,7 @@ class SFrame(object):
                 if keylist_counter[key] > 1:
                     raise ValueError("There are duplicate keys in key list: '" + key + "'")
 
-        colnames_and_types = zip(self.column_names(), self.column_types())
+        colnames_and_types = list(zip(self.column_names(), self.column_types()))
 
         # Ok. we want the string columns to be in the ordering defined by the
         # argument.  And then all the type selection columns.
@@ -3698,7 +3698,7 @@ class SFrame(object):
             column_names = self.column_names()
             while(True):
                 for j in ret:
-                    yield dict(zip(column_names, j))
+                    yield dict(list(zip(column_names, j)))
 
                 if len(ret) == elems_at_a_time:
                     ret = self.__proxy__.iterator_get_next(elems_at_a_time)
@@ -4796,7 +4796,7 @@ class SFrame(object):
         new_names = new_sf.column_names()
         while set(new_names).intersection(rest_columns):
             new_names = [name + ".1" for name in new_names]
-        new_sf.rename(dict(zip(new_sf.column_names(), new_names)))
+        new_sf.rename(dict(list(zip(new_sf.column_names(), new_names))))
 
         _mt._get_metric_tracker().track('sframe.split_datetime')
         ret_sf = self.select_columns(rest_columns)
@@ -4937,7 +4937,7 @@ class SFrame(object):
         new_names = new_sf.column_names()
         while set(new_names).intersection(rest_columns):
             new_names = [name + ".1" for name in new_names]
-        new_sf.rename(dict(zip(new_sf.column_names(), new_names)))
+        new_sf.rename(dict(list(zip(new_sf.column_names(), new_names))))
 
         _mt._get_metric_tracker().track('sframe.unpack')
         ret_sf = self.select_columns(rest_columns)

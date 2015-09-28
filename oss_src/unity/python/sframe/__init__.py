@@ -20,12 +20,12 @@ This software may be modified and distributed under the terms
 of the BSD license. See the LICENSE file for details.
 '''
 
-import util
+from . import util
 from .util import set_runtime_config
 from .util import get_runtime_config
 
 from .connect import _get_metric_tracker
-import visualization
+from . import visualization
 
 from .data_structures.sgraph import Vertex, Edge
 from .data_structures.sgraph import SGraph

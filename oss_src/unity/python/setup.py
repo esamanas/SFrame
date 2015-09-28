@@ -166,7 +166,7 @@ if __name__ == '__main__':
         install_requires=[
             "boto == 2.33.0",
             "librato-metrics == 0.4.9",
-            "mixpanel-py == 3.1.1",
+            "mixpanel-py == 4.1.0",
             "decorator == 3.4.0",
             "tornado == 4.1",
             "prettytable == 0.7.2",
