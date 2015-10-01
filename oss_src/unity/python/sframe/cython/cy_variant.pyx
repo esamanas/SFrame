@@ -9,9 +9,9 @@ of the BSD license. See the LICENSE file for details.
 import cython
 from libcpp.string cimport string
 from libcpp.pair cimport pair
-cimport cy_graph
-cimport cy_sframe
-cimport cy_sarray
+from . cimport cy_graph
+from . cimport cy_sframe
+from . cimport cy_sarray
 from .cy_graph cimport UnityGraphProxy
 from .cy_model cimport create_model_from_proxy
 from .cy_model cimport UnityModel

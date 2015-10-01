@@ -230,7 +230,7 @@ function( compile_pyx _name generated_file )
     COMMAND ${CYTHON_EXECUTABLE}
     ARGS ${cxx_arg} ${include_directory_arg}
     ${annotate_arg} ${no_docstrings_arg} ${cython_debug_arg} ${CYTHON_FLAGS} ${cython_traceback}
-    --output-file  ${_generated_target_file} ${pyx_locations} 
+    -3 --output-file  ${_generated_target_file} ${pyx_locations}
     DEPENDS ${pyx_locations} ${pxd_dependencies}
     IMPLICIT_DEPENDS ${pyx_lang} ${c_header_dependencies}
     COMMENT ${comment}
