@@ -22,6 +22,6 @@ __all__ = ['sframe', 'sarray', 'sgraph', 'sketch', 'image']
 
 from . import image
 import sframe
-import sarray
+from . import sarray
 import sgraph
 import sketch

@@ -57,4 +57,3 @@ make_copy_target(_local_sys_util_
 add_dependencies(spark_unity _local_sys_util_)
 file(DOWNLOAD http://s3-us-west-2.amazonaws.com/glbin-engine/spark_unity_0.3.jar ${CMAKE_CURRENT_BINARY_DIR}/spark_unity.jar
       EXPECTED_MD5 b6261c8614da3da1c89dce64fed09420)
-

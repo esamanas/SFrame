@@ -73,7 +73,7 @@ mark_as_advanced( CYTHON_ANNOTATE CYTHON_NO_DOCSTRINGS CYTHON_FLAGS )
 
 find_package( Cython REQUIRED )
 set(PYTHON_INCLUDE_DIR
-  ${CMAKE_SOURCE_DIR}/deps/local/include/python2.7)
+  ${CMAKE_SOURCE_DIR}/deps/local/include/python3.4m)
 set(PYTHON_LIBRARIES 
   ${CMAKE_SOURCE_DIR}/deps/local/lib/${CMAKE_SHARED_LIBRARY_PREFIX}python2.7${CMAKE_SHARED_LIBRARY_SUFFIX})
 find_package( PythonLibs REQUIRED )

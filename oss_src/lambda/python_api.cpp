@@ -54,7 +54,7 @@ void set_gl_sys_path() {
   }
 }
 
-void init_python(int argc, char** argv) {
+void init_python(int argc, wchar_t** argv) {
   Py_Initialize();
 
   PySys_SetArgvEx(argc, argv, 0);

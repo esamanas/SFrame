@@ -34,7 +34,7 @@ ENGINE_START_ERROR_MESSAGE = 'Cannot connect to GraphLab Create engine. ' + \
 def __catch_and_log__(func, *args, **kargs):
         try:
             return func(*args, **kargs)
-        except Exception, error:
+        except Exception as error:
             logging.getLogger(__name__).error(error)
 
 

@@ -1251,7 +1251,7 @@ class SArray(object):
         options = dict()
         options["to_lower"] = to_lower == True
         # defaults to std::isspace whitespace delimiters if no others passed in
-    	options["delimiters"] = delimiters
+        options["delimiters"] = delimiters
 
         with cython_context():
             return SArray(_proxy=self.__proxy__.count_bag_of_words(options))
