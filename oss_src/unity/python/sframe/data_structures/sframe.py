@@ -23,7 +23,7 @@ from ..util import _make_internal_url
 from .sarray import SArray, _create_sequential_sarray
 from .. import aggregate
 from .image import Image as _Image
-from ..deps import pandas, HAS_PANDAS
+from ..deps import pandas, HAS_PANDAS, HAS_NUMPY
 from .grouped_sframe import GroupedSFrame
 import array
 from prettytable import PrettyTable
@@ -247,7 +247,7 @@ class SFrame(object):
     <https://dato.com/learn/translator>`_, `How-Tos
     <https://dato.com/learn/how-to>`_, and data science `Gallery
     <https://dato.com/learn/gallery>`_.
-    
+
     Parameters
     ----------
     data : array | pandas.DataFrame | string | dict, optional
@@ -905,7 +905,7 @@ class SFrame(object):
             if (len(d) == 1):
               # easy case. both agree on the type
               continue
-            if ((int in d) and (float in d)):
+            if (((long in d) or (int in d)) and (float in d)):
               # one is an int, one is a float. its a float
               column_type_hints[j] = float
             elif ((array.array in d) and (list in d)):
@@ -1904,11 +1904,11 @@ class SFrame(object):
                 df, tmp_loc, finalSFramePrefix)
         else:
             if encoding == 'utf8':
-                ## TODO: This is a temporary solution. Here we are completely bypassing 
+                ## TODO: This is a temporary solution. Here we are completely bypassing
                 ## toSFrame() codepath when encoding is 'utf8'. This is because of Spark1.5 error
                 ## for closure cleaning issue on deep nested functions.
 
-                def f(iterator): 
+                def f(iterator):
                     for obj in iterator:
                         yield obj.encode("utf-8")
 
@@ -1916,7 +1916,7 @@ class SFrame(object):
                 encoding = "batch"
                 if(rdd._jrdd_deserializer.__class__.__name__ == 'PickleSerializer'):
                     encoding = "pickle"
-                
+
                 #finalSFrameFilename = graphlab_util_ref.toSFrame(
                 #    rdd._jrdd.rdd(),tmp_loc, finalSFramePrefix)
             #else:
@@ -2218,6 +2218,11 @@ class SFrame(object):
             new line. `max_row_width` is automatically reset to be the
             larger of itself and `max_column_width`.
 
+        output_file: file, optional
+            The stream or file that receives the output. By default the output
+            goes to sys.stdout, but it can also be redirected to a file or a
+            string (using an object of type StringIO).
+
         See Also
         --------
         head, tail
@@ -2475,6 +2480,23 @@ class SFrame(object):
             if len(df[column_name]) == 0:
                 df[column_name] = df[column_name].astype(self.column_types()[i])
         return df
+
+    def to_numpy(self):
+        """
+        Converts this SFrame to a numpy array
+
+        This operation will construct a numpy array in memory. Care must
+        be taken when size of the returned object is big.
+
+        Returns
+        -------
+        out : numpy.ndarray
+            A Numpy Array containing all the values of the SFrame
+
+        """
+        assert HAS_NUMPY
+        import numpy
+        return numpy.transpose(numpy.asarray([self[x] for x in self.column_names()]))
 
     def tail(self, n=10):
         """
