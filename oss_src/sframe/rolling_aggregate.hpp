@@ -59,14 +59,95 @@ flexible_type mean(Iterator first, Iterator last) {
     ++non_null_count;
   }
 
-  if(!count)
+  // Avoid division by zero
+  if(!non_null_count)
     return flex_undefined();
 
   //TODO: Should I divide at end, or each iteration?
   return f / float(non_null_count);
 }
 
+template<typename Iterator>
+flexible_type sum(Iterator first, Iterator last) {
+  flexible_type f = 0.0f;
+  for(; first != last; ++first) {
+    if(first->get_type() != flex_type_enum::UNDEFINED)
+      f += *first;
+  }
 
+  return f;
+}
+
+template<typename Iterator>
+flexible_type min(Iterator first, Iterator last) {
+  flexible_type min_val = flex_undefined();
+  for(; first != last; ++first) {
+    if(first->get_type() != flex_type_enum::UNDEFINED) {
+      if(min_val.get_type() != flex_type_enum::UNDEFINED && *first < min_val) {
+        min_val = *first;
+      }
+    }
+  }
+
+  return min_val;
+}
+
+template<typename Iterator>
+flexible_type max(Iterator first, Iterator last) {
+  flexible_type max_val = flex_undefined();
+  for(; first != last; ++first) {
+    if(first->get_type() != flex_type_enum::UNDEFINED) {
+      if(max_val.get_type() != flex_type_enum::UNDEFINED && *first > max_val) {
+        max_val = *first;
+      }
+    }
+  }
+
+  return max_val;
+}
+
+template<typename Iterator>
+flexible_type count(Iterator first, Iterator last) {
+  flexible_type ret_count = flex_int(0);
+  for(; first != last; ++first) {
+    if(first->get_type() != flex_type_enum::UNDEFINED) {
+      ++ret_count;
+    }
+  }
+
+  return ret_count;
+}
+
+
+template<typename Iterator>
+flexible_type median(Iterator first, Iterator last) {
+  flexible_type median_val;
+
+  // Count non-NULL 
+  std::vector<flexible_type> non_null_values;
+  for(; first != last; ++first) {
+    if(first->get_type() != flex_type_enum::UNDEFINED) {
+      non_null_values.push_back(*first);
+    }
+  }
+
+  auto nn_size = non_null_values.size();
+  if(nn_size == 0) {
+    median_val = flex_undefined();
+  } else if(nn_size == 1) {
+    median_val = non_null_values[0];
+  } else if((nn_size % 2) == 0) {
+    auto last_val = nn_size / 2;
+    auto first_val = last_val-1;
+    median_val =
+      float(non_null_values[last_val]+non_null_values[first_val]) / 2.0f;
+  } else {
+    median_val = float(non_null_values[nn_size / 2]);
+  }
+
+  return median_val;
+}
+    
 /**
  * Scans the current window to check for the number of non-NULL values.
  *
