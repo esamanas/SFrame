@@ -1942,3 +1942,43 @@ class SArrayTest(unittest.TestCase):
             SArray([None, 1,   None, 3, None, 5]),
             SArray([None, 0.0, 0.0, 1.0, 1.0, 2.6666666666666665])
         )
+
+    def test_numpy_datetime64(self):
+        # Make all datetimes naive
+        expected = [dt.datetime(*(i.timetuple()[:6])) \
+                if i is not None else None for i in self.datetime_data]
+
+        # A regular list
+        iso_str_list = [np.datetime64('2013-05-07T10:04:10Z'),
+                        np.datetime64('1902-10-21T10:34:10Z'),
+                        None]
+        sa = SArray(iso_str_list)
+        self.__test_equal(sa,expected,dt.datetime)
+
+        # A numpy array
+        np_ary = np.array(iso_str_list)
+        sa = SArray(np_ary)
+        self.__test_equal(sa,expected,dt.datetime)
+
+        ### Every possible type of datetime64
+        test_str = '1969-12-31T23:59:56Z'
+        available_time_units = ['h','m','s','ms','us','ns','ps','fs','as']
+        expected = [dt.datetime(1969,12,31,23,59,56) for i in range(7)]
+        expected.insert(0,dt.datetime(1969,12,31,23,59,0))
+        expected.insert(0,dt.datetime(1969,12,31,23,0,0))
+        for i in range(len(available_time_units)):
+            sa = SArray([np.datetime64(test_str,available_time_units[i])])
+            self.__test_equal(sa,[expected[i]],dt.datetime)
+
+        test_str = '1908-06-01'
+        available_date_units = ['Y','M','W','D']
+        expected = [dt.datetime(1908,6,1,0,0,0) for i in range(4)]
+        expected[2] = dt.datetime(1908,5,28,0,0,0) # weeks start on Thursday?
+        expected[0] = dt.datetime(1908,1,1,0,0,0) # weeks start on Thursday?
+        for i in range(len(available_date_units)):
+            sa = SArray([np.datetime64(test_str,available_date_units[i])])
+            self.__test_equal(sa,[expected[i]],dt.datetime)
+
+        # Daylight savings time?
+        # timezone considerations
+        ### Out of our datetime range
