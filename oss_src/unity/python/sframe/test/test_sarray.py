@@ -1974,11 +1974,24 @@ class SArrayTest(unittest.TestCase):
         available_date_units = ['Y','M','W','D']
         expected = [dt.datetime(1908,6,1,0,0,0) for i in range(4)]
         expected[2] = dt.datetime(1908,5,28,0,0,0) # weeks start on Thursday?
-        expected[0] = dt.datetime(1908,1,1,0,0,0) # weeks start on Thursday?
+        expected[0] = dt.datetime(1908,1,1,0,0,0)
         for i in range(len(available_date_units)):
             sa = SArray([np.datetime64(test_str,available_date_units[i])])
             self.__test_equal(sa,[expected[i]],dt.datetime)
 
-        # Daylight savings time?
+        # Daylight savings time (Just to be safe. datetime64 deals in UTC, and
+        # we store times in UTC by default, so this shouldn't affect anything)
+        dst_just_began = np.datetime64('2015-03-08T02:38:00-08')
+        val_expected = dt.datetime(2015,3,8,10,38)
+        sa = SArray([dst_just_began, dst_just_began])
+        expected = [val_expected, val_expected]
+        self.__test_equal(sa, expected, dt.datetime)
+
         # timezone considerations
+        sa = SArray([np.datetime64('2016-01-01T05:45:00+0545')])
+        expected =  [dt.datetime(2016,1,1,0,0,0)]
+        self.__test_equal(sa, expected, dt.datetime)
+
         ### Out of our datetime range
+        with self.assertRaises(TypeError):
+            sa = SArray([np.datetime64('1066-10-14T09:00:00Z')])
