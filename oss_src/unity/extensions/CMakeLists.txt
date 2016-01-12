@@ -9,6 +9,7 @@ endmacro()
 make_extension(internal_demo SOURCES internal_demo.cpp)
 make_extension(additional_sframe_utilities SOURCES additional_sframe_utilities.cpp)
 make_extension(grouped_sframe SOURCES grouped_sframe.cpp)
+make_extension(sarray_builder SOURCES sarray_builder.cpp)
 
 #----------------------------
 set_property(DIRECTORY PROPERTY EXTENSIONS_LIST "${EXTENSIONS_LIST}")
