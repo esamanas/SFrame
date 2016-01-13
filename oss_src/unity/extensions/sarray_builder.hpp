@@ -25,6 +25,7 @@ class sarray_builder: public graphlab::toolkit_class_base {
   bool m_inited = false;
   sarray<flexible_type> m_sarray;
   sarray<flexible_type>::iterator m_out_iter;
+  flex_type_enum m_ary_type = flex_type_enum::UNDEFINED;
  public:
   BEGIN_CLASS_MEMBER_REGISTRATION("sarray_builder")
   REGISTER_CLASS_MEMBER_FUNCTION(sarray_builder::init, "num_segments")

@@ -16,10 +16,17 @@ namespace graphlab {
 void sarray_builder::init(size_t num_segments) {
   m_sarray.open_for_write(1);
   m_out_iter = m_sarray.get_output_iterator(0);
+
   m_inited = true;
 }
 
 void sarray_builder::append(const flexible_type &val) {
+  auto in_type = val.get_type();
+  if(in_type != flex_type_enum::UNDEFINED &&
+      m_ary_type == flex_type_enum::UNDEFINED) {
+    m_ary_type = in_type;
+    m_sarray.set_type(m_ary_type);
+  }
   *m_out_iter = val;
 }
 
