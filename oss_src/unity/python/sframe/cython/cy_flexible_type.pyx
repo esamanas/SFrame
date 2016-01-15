@@ -353,7 +353,7 @@ _type_lookup_by_type_enum[<int>DATETIME]  = datetime_type
 _type_lookup_by_type_enum[<int>UNDEFINED] = types.NoneType
 _type_lookup_by_type_enum[<int>IMAGE]     = _image_type
 
-cdef type pytype_from_flex_type_enum(flex_type_enum e):
+cpdef type pytype_from_flex_type_enum(flex_type_enum e):
     return _type_lookup_by_type_enum[<int> e]
 
 ################################################################################
@@ -390,7 +390,7 @@ _enum_tr_codes[FT_FAILURE]                 = UNDEFINED
 cdef inline flex_type_enum flex_type_from_tr_code(int tr_code):
     return _enum_tr_codes[tr_code]
 
-cdef inline flex_type_enum flex_type_enum_from_pytype(type t) except *:
+cpdef inline flex_type_enum flex_type_enum_from_pytype(type t) except *:
     """
     Given a type, returns the flex_type_enum associated with that type.
     """

@@ -1,3 +1,4 @@
+"""
 class SArrayBuilder(object):
     #TODO: What would a parallel write look like from this interface?
     def __init__(self, num_segments=1):
@@ -7,9 +8,10 @@ class SArrayBuilder(object):
     #TODO: Take generator/generator expressions?
     def append(self, data, segment=0):
         # ??? What data will this accept?
-        self._builder.append(data)
+        self._builder.append(data, segment)
 
     def close(self):
-        pass
+        self._builder.close()
+"""
 
 
