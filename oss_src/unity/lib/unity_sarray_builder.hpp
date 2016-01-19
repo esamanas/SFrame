@@ -27,7 +27,7 @@ class unity_sarray_builder: public unity_sarray_builder_base {
   void append_multiple(const std::vector<flexible_type> &vals, size_t segment);
 
   flex_type_enum get_type();
-  std::vector<flexible_type> read_history(size_t num_elems=size_t(-1));
+  std::vector<flexible_type> read_history(size_t num_elems);
   std::shared_ptr<unity_sarray_base> close();
  private:
   /// Methods
@@ -35,7 +35,7 @@ class unity_sarray_builder: public unity_sarray_builder_base {
   /// Variables
   bool m_inited = false;
   bool m_closed = false;
-  sarray<flexible_type> m_sarray;
+  std::shared_ptr<sarray<flexible_type>> m_sarray;
   std::vector<sarray<flexible_type>::iterator> m_out_iters;
   flex_type_enum m_ary_type = flex_type_enum::UNDEFINED;
   flex_type_enum m_given_dtype = flex_type_enum::UNDEFINED;

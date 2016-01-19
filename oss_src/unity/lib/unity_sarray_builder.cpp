@@ -7,6 +7,7 @@
  */
 
 #include <unity/lib/unity_sarray_builder.hpp>
+#include <unity/lib/unity_sarray.hpp>
 
 namespace graphlab {
 
@@ -15,11 +16,11 @@ void unity_sarray_builder::init(size_t num_segments, size_t history_size, flex_t
   if(m_inited)
     log_and_throw("This sarray_builder has already been initialized!");
 
-
-  m_sarray.open_for_write(num_segments);
+  m_sarray = std::make_shared<sarray<flexible_type>>();
+  m_sarray->open_for_write(num_segments);
   m_out_iters.resize(num_segments);
   for(size_t i = 0; i < num_segments; ++i) {
-    m_out_iters[i] = m_sarray.get_output_iterator(i);
+    m_out_iters[i] = m_sarray->get_output_iterator(i);
   }
   m_history = std::make_shared<boost::circular_buffer<flexible_type>>(history_size);
   m_given_dtype = dtype;
@@ -81,14 +82,17 @@ std::vector<flexible_type> unity_sarray_builder::read_history(size_t num_elems) 
 
   if(num_elems > m_history->size())
     num_elems = m_history->size();
-
   if(num_elems == size_t(-1))
     num_elems = m_history->size();
 
   std::vector<flexible_type> ret_vec(num_elems);
+
+  if(num_elems == 0)
+    return ret_vec;
+
   auto riter = m_history->rbegin();
-  size_t ret_vec_idx = num_elems-1;
-  for(; (riter != m_history->rend()); ++riter, --ret_vec_idx) {
+  ssize_t ret_vec_idx = num_elems-1;
+  for(; ((riter != m_history->rend()) && ret_vec_idx >= 0); ++riter, --ret_vec_idx) {
     ret_vec[ret_vec_idx] = *riter;
   }
 
@@ -103,9 +107,9 @@ std::shared_ptr<unity_sarray_base> unity_sarray_builder::close() {
     log_and_throw("Already closed.");
 
   // This will fail if the user supplied types go against the dtype they provided
-  m_sarray.set_type(m_ary_type);
+  m_sarray->set_type(m_ary_type);
 
-  m_sarray.close();
+  m_sarray->close();
   m_closed = true;
   auto ret = std::make_shared<unity_sarray>();
   ret->construct_from_sarray(m_sarray);

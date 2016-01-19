@@ -98,8 +98,8 @@ cdef extern from "<flexible_type/flexible_type.hpp>" namespace "graphlab":
 ctypedef map[string, flexible_type] gl_options_map
 
 # If we just want to work with the enum types, use these.
-cpdef flex_type_enum flex_type_enum_from_pytype(type t) except *
-cpdef type pytype_from_flex_type_enum(flex_type_enum e)
+cdef flex_type_enum flex_type_enum_from_pytype(type t) except *
+cdef type pytype_from_flex_type_enum(flex_type_enum e)
 cpdef type pytype_from_dtype(object dt)
 cdef flex_type_enum flex_type_from_dtype(object dt)
 cpdef type pytype_from_array_typecode(str a)
