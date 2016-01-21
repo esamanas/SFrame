@@ -49,6 +49,12 @@ class SArrayBuilderTest(unittest.TestCase):
             sb = SArrayBuilder()
             self.__test_append_multiple(sb, i[0], i[1])
 
+            sb = SArrayBuilder(dtype=i[1])
+            self.__test_append(sb, i[0], i[1])
+
+            sb = SArrayBuilder(dtype=i[1])
+            self.__test_append_multiple(sb, i[0], i[1])
+
     def test_type_inference(self):
         # Make sure type inference is the default behavior
         sb = SArrayBuilder()

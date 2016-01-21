@@ -24,6 +24,7 @@
 #include <unity/lib/unity_sarray.hpp>
 #include <unity/lib/unity_sketch.hpp>
 #include <unity/lib/unity_sarray_builder.hpp>
+#include <unity/lib/unity_sframe_builder.hpp>
 #include <unity/lib/version.hpp>
 #include <unity/lib/simple_model.hpp>
 #include <parallel/pthread_tools.hpp>
@@ -393,6 +394,9 @@ int main(int argc, char** argv) {
                                           });
   server->register_type<graphlab::unity_sarray_builder_base>([]()->graphlab::unity_sarray_builder_base* { 
                                             return new graphlab::unity_sarray_builder();
+                                          });
+  server->register_type<graphlab::unity_sframe_builder_base>([]()->graphlab::unity_sframe_builder_base* { 
+                                            return new graphlab::unity_sframe_builder();
                                           });
 
 

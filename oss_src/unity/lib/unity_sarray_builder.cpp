@@ -30,7 +30,6 @@ void unity_sarray_builder::init(size_t num_segments, size_t history_size, flex_t
   m_inited = true;
 }
 
-//TODO: Should I provide instant feedback when an inserted type will cause an error?
 void unity_sarray_builder::append(const flexible_type &val, size_t segment) {
   if(!m_inited)
     log_and_throw("Must call 'init' first!");
