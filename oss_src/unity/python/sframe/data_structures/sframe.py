@@ -19,7 +19,8 @@ from ..connect import main as glconnect
 from ..cython.cy_flexible_type import infer_type_of_list
 from ..cython.context import debug_trace as cython_context
 from ..cython.cy_sframe import UnitySFrameProxy
-from ..util import _make_internal_url
+from ..util import _make_internal_url, infer_dbapi2_types
+from ..util import get_module_from_object
 from .sarray import SArray, _create_sequential_sarray
 from .. import aggregate
 from .image import Image as _Image
@@ -2046,6 +2047,79 @@ class SFrame(object):
 
         if (not verbose):
             glconnect.get_client().set_log_progress(True)
+
+    @classmethod
+    def from_sql(cls, conn, sql_statement, params=None):
+        """
+        The DOXX!!!
+        """
+        from .sframe_builder import SFrameBuilder
+        c = conn.cursor()
+        c.execute(sql_statement)
+        result_desc = c.description
+        result_names = [i[0] for i in result_desc]
+        result_types = [None for i in result_desc]
+        temp_vals = []
+
+        for row in c:
+            temp_vals.append(row)
+            val_count = 0
+            for val in row:
+                if result_types[val_count] is None and val is not None:
+                    result_types[val_count] = type(val)
+                val_count += 1
+            #TODO: Make this number configurable
+            if all(result_types) or len(temp_vals) > 100:
+                break
+
+        if not all(result_types):
+            inferred_types = infer_dbapi2_types(c)
+            cnt = 0
+            for i in result_types:
+                if i is None:
+                    result_types[cnt] = inferred_types[cnt]
+                cnt += 1
+
+        sb = SFrameBuilder(result_types, column_names=result_names)
+        sb.append_multiple(temp_vals)
+        sb.append_multiple(c)
+        cls = sb.close()
+        c.close()
+        return cls
+
+    def to_sql(self, conn, table_name):
+        """
+        """
+        c = conn.cursor()
+        mod = get_module_from_object(conn)
+        col_info = zip(self.column_names(), self.column_types())
+
+        sql_param = {'qmark':lambda name,col_num,col_type: '?',
+            'numeric' :lambda name,col_num,col_type:':'+str(col_num),
+            'named'   :lambda name,col_num,col_type:':'+str(name),
+            'format'  :lambda name,col_num,col_type:'%'+pytype_to_printf(col_type),
+            'pyformat':lambda name,col_num,col_type:'%('+str(name)+')'+pytype_to_printf(col_type),
+            }
+
+        get_sql_param = sql_param[mod.paramstyle]
+        if (mod.paramstyle == 'named' or mod.paramstyle == 'pyformat'):
+          prepare_sf_row = lambda x:x
+        else:
+          prepare_sf_row = lambda x:x.values()
+        
+        # form insert string
+        ins_str = "INSERT INTO " + str(table_name) + " VALUES ("
+        count = 0
+        for i in col_info:
+            ins_str += get_sql_param(col_info[0],count,col_info[1])
+            if count < len(col_info)-1:
+                ins_str += ","
+            count += 1
+        ins_str += ")"
+        for i in self:
+            c.execute(ins_str, prepare_sf_row)
+        conn.commit()
+        c.close()
 
     def __repr__(self):
         """
