@@ -20,7 +20,7 @@ from ..cython.cy_flexible_type import infer_type_of_list
 from ..cython.context import debug_trace as cython_context
 from ..cython.cy_sframe import UnitySFrameProxy
 from ..util import _make_internal_url, infer_dbapi2_types
-from ..util import get_module_from_object
+from ..util import get_module_from_object, pytype_to_printf
 from .sarray import SArray, _create_sequential_sarray
 from .. import aggregate
 from .image import Image as _Image
@@ -2090,34 +2090,44 @@ class SFrame(object):
     def to_sql(self, conn, table_name):
         """
         """
+        format_all_s = True
         c = conn.cursor()
         mod = get_module_from_object(conn)
         col_info = zip(self.column_names(), self.column_types())
 
-        sql_param = {'qmark':lambda name,col_num,col_type: '?',
-            'numeric' :lambda name,col_num,col_type:':'+str(col_num),
-            'named'   :lambda name,col_num,col_type:':'+str(name),
-            'format'  :lambda name,col_num,col_type:'%'+pytype_to_printf(col_type),
-            'pyformat':lambda name,col_num,col_type:'%('+str(name)+')'+pytype_to_printf(col_type),
+        if format_all_s:
+            pytype_to_printf = lambda x: 's'
+
+        # DBAPI2 standard allows for five different ways to specify parameters
+        sql_param = {
+            'qmark'   : lambda name,col_num,col_type: '?',
+            'numeric' : lambda name,col_num,col_type:':'+str(col_num),
+            'named'   : lambda name,col_num,col_type:':'+str(name),
+            'format'  : lambda name,col_num,col_type:'%'+pytype_to_printf(col_type),
+            'pyformat': lambda name,col_num,col_type:'%('+str(name)+')'+pytype_to_printf(col_type),
             }
 
         get_sql_param = sql_param[mod.paramstyle]
-        if (mod.paramstyle == 'named' or mod.paramstyle == 'pyformat'):
-          prepare_sf_row = lambda x:x
-        else:
-          prepare_sf_row = lambda x:x.values()
         
         # form insert string
         ins_str = "INSERT INTO " + str(table_name) + " VALUES ("
         count = 0
         for i in col_info:
-            ins_str += get_sql_param(col_info[0],count,col_info[1])
+            ins_str += get_sql_param(i[0],count,i[1])
             if count < len(col_info)-1:
                 ins_str += ","
             count += 1
         ins_str += ")"
+
+        # Some formats require values in an iterable, some a dictionary
+        if (mod.paramstyle == 'named' or mod.paramstyle == 'pyformat'):
+          prepare_sf_row = lambda x:x
+        else:
+          prepare_sf_row = lambda x:x.values()
+
         for i in self:
-            c.execute(ins_str, prepare_sf_row)
+            c.execute(ins_str, prepare_sf_row(i))
+
         conn.commit()
         c.close()
 

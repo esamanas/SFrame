@@ -32,6 +32,8 @@ import random
 import shutil
 import functools
 import sys
+import mock
+import sqlite3
 HAS_PYSPARK = True
 try:
     from pyspark import SparkContext, SQLContext
@@ -3023,6 +3025,16 @@ class SFrameTest(unittest.TestCase):
         s = [str(i) for i in range(100)]
         Y = np.transpose(np.array([s, s]))
         nptest.assert_array_equal(X.to_numpy(), Y)
+
+    @mock.patch(__name__+'.sqlite3')
+    def test_to_sql(self, mock_mod):
+        sf = SFrame({'a':[1,2,3],'b':[4,5,6]})
+        conn = mock_mod.connect('example.db')
+        mock_mod.connect.assert_called_with('example.db')
+        #???? I don't know how this works
+        mock_mod.paramstyle = 'qmark'
+        sf.to_sql(conn, "ins_test")
+
 
 if __name__ == "__main__":
 

@@ -866,4 +866,9 @@ def infer_dbapi2_types(cursor):
     return ret_types
 
 def pytype_to_printf(in_type):
-    return 's'
+    if in_type == int:
+        return 'd'
+    elif in_type == float:
+        return 'f'
+    else:
+        return 's'
