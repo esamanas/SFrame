@@ -2049,31 +2049,32 @@ class SFrame(object):
             glconnect.get_client().set_log_progress(True)
 
     @classmethod
-    def from_sql(cls, conn, sql_statement, params=None):
+    def from_sql(cls, conn, sql_statement, params=None, num_cache_rows=100, dbapi_module=None):
         """
         The DOXX!!!
         """
+        # TODO: Make sure errors related to finding dbapi module are clear!!
         from .sframe_builder import SFrameBuilder
         c = conn.cursor()
-        c.execute(sql_statement)
+        c.execute(sql_statement, params)
         result_desc = c.description
         result_names = [i[0] for i in result_desc]
         result_types = [None for i in result_desc]
         temp_vals = []
 
         for row in c:
+            #TODO: Will this break if the connector returns a dict for a row?
             temp_vals.append(row)
             val_count = 0
             for val in row:
                 if result_types[val_count] is None and val is not None:
                     result_types[val_count] = type(val)
                 val_count += 1
-            #TODO: Make this number configurable
-            if all(result_types) or len(temp_vals) > 100:
+            if all(result_types) or len(temp_vals) > num_cache_rows:
                 break
 
         if not all(result_types):
-            inferred_types = infer_dbapi2_types(c)
+            inferred_types = infer_dbapi2_types(c, dbapi_module)
             cnt = 0
             for i in result_types:
                 if i is None:

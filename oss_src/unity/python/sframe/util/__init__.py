@@ -840,9 +840,10 @@ def get_module_from_object(obj):
     mod_str = obj.__class__.__module__.split('.')[0]
     return _sys.modules[mod_str]
 
-def infer_dbapi2_types(cursor):
+def infer_dbapi2_types(cursor, dbapi2_module=None):
     desc = cursor.description
-    dbapi2_module = get_module_from_object(cursor)
+    if dbapi2_module is None:
+        dbapi2_module = get_module_from_object(cursor)
     result_set_types = [i[1] for i in desc]
     dbapi2_to_python = [ # a type code can match more than one, so ordered by
                          # preference (loop short-circuits when it finds a match

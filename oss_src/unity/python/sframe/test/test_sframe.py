@@ -71,14 +71,15 @@ class SFrameTest(unittest.TestCase):
         self.dict_data =  [{str(i): i, i : float(i)} for i in self.int_data]
         self.datetime_data = [dt.datetime(2013, 5, 7, 10, 4, 10),
                 dt.datetime(1902, 10, 21, 10, 34, 10).replace(tzinfo=GMT(0.0))]
-        all_type_cols = [self.int_data,
-                         self.float_data,
-                         self.string_data,
-                         self.vec_data,
-                         self.list_data,
-                         self.dict_data,
-                         self.datetime_data*5]
-        self.sf_all_types = SFrame({"X"+str(i[0]):i[1] for i in zip(range(1,8),all_type_cols)})
+        self.all_type_cols = [self.int_data,
+                              self.float_data,
+                              self.string_data,
+                              self.vec_data,
+                              self.list_data,
+                              self.dict_data,
+                              self.datetime_data*5]
+        self.sf_all_types = SFrame({"X"+str(i[0]):i[1] for i in zip(range(1,8),
+          self.all_type_cols)})
 
         # Taken from http://en.wikipedia.org/wiki/Join_(SQL) for fun.
         self.employees_sf = SFrame()
@@ -3038,6 +3039,36 @@ class SFrameTest(unittest.TestCase):
         s = [str(i) for i in range(100)]
         Y = np.transpose(np.array([s, s]))
         nptest.assert_array_equal(X.to_numpy(), Y)
+
+    @mock.patch(__name__+'.sqlite3.Cursor', spec=True)
+    @mock.patch(__name__+'.sqlite3.Connection', spec=True)
+    def test_from_sql(self, mock_conn, mock_cursor):
+        class mock_mod(object):
+            def __init__(self):
+                self.apilevel = "2.0 "
+                self.STRING = 41
+                self.BINARY = 42
+                self.DATETIME = 43
+                self.NUMBER = 44
+                self.ROWID = 45
+                
+        ## Test cases:
+        # Easy python types
+        # Bigger than cache
+        # more None rows than cache & types in description
+        # more None rows than cache & no type information
+        # some params?
+        conn = mock_conn('example.db')
+        curs = mock_cursor()
+        conn.cursor.return_value = curs
+        curs.description = (('X1',None),('X2',None),('X3',None))
+        curs.__iter__.return_value = zip(*self.all_type_cols[0:3]).__iter__()
+
+        sf = SFrame.from_sql(conn, "SELECT * FROM test_table", num_cache_rows=5, dbapi_module=mock_mod())
+
+        print sf
+
+
 
     @mock.patch(__name__+'.sqlite3.Cursor', spec=True)
     @mock.patch(__name__+'.sqlite3.Connection', spec=True)
