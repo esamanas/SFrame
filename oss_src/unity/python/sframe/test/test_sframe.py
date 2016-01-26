@@ -66,6 +66,19 @@ class SFrameTest(unittest.TestCase):
         self.float_data2 = [1.0 * i for i in range(50,60)]
         self.string_data2 = [str(i) for i in range(50,60)]
         self.dataframe2 = pd.DataFrame({'int_data': self.int_data2, 'float_data': self.float_data2, 'string_data': self.string_data2})
+        self.vec_data = [array.array('d', [i, i+1]) for i in self.int_data]
+        self.list_data = [[i, str(i), i * 1.0] for i in self.int_data]
+        self.dict_data =  [{str(i): i, i : float(i)} for i in self.int_data]
+        self.datetime_data = [dt.datetime(2013, 5, 7, 10, 4, 10),
+                dt.datetime(1902, 10, 21, 10, 34, 10).replace(tzinfo=GMT(0.0))]
+        all_type_cols = [self.int_data,
+                         self.float_data,
+                         self.string_data,
+                         self.vec_data,
+                         self.list_data,
+                         self.dict_data,
+                         self.datetime_data*5]
+        self.sf_all_types = SFrame({"X"+str(i[0]):i[1] for i in zip(range(1,8),all_type_cols)})
 
         # Taken from http://en.wikipedia.org/wiki/Join_(SQL) for fun.
         self.employees_sf = SFrame()
@@ -3026,15 +3039,43 @@ class SFrameTest(unittest.TestCase):
         Y = np.transpose(np.array([s, s]))
         nptest.assert_array_equal(X.to_numpy(), Y)
 
-    @mock.patch(__name__+'.sqlite3')
-    def test_to_sql(self, mock_mod):
-        sf = SFrame({'a':[1,2,3],'b':[4,5,6]})
-        conn = mock_mod.connect('example.db')
-        mock_mod.connect.assert_called_with('example.db')
-        #???? I don't know how this works
-        mock_mod.paramstyle = 'qmark'
-        sf.to_sql(conn, "ins_test")
+    @mock.patch(__name__+'.sqlite3.Cursor', spec=True)
+    @mock.patch(__name__+'.sqlite3.Connection', spec=True)
+    def test_to_sql(self, mock_conn, mock_cursor):
+        class mock_mod(object):
+            def __init__(self, paramstyle):
+                self.paramstyle = paramstyle
+                self.apilevel = "2.0 "
 
+        insert_stmt = "INSERT INTO ins_test VALUES ({0},{1},{2},{3},{4},{5},{6})"
+        num_cols = len(self.sf_all_types.column_names())
+        test_cases = [
+            ('qmark',insert_stmt.format(*['?' for i in range(num_cols)])),
+            ('numeric',insert_stmt.format(*[':'+str(i) for i in range(1,num_cols+1)])),
+            ('named',insert_stmt.format(*[':X'+str(i) for i in range(1,num_cols+1)])),
+            ('format',insert_stmt.format(*['%s' for i in range(num_cols)])),
+            ('pyformat',insert_stmt.format(*['%(X'+str(i)+')s' for i in range(1,num_cols+1)])),
+              ]
+        for i in test_cases:
+            conn = mock_conn('example.db')
+            curs = mock_cursor()
+            conn.cursor.return_value = curs
+
+            self.sf_all_types.to_sql(conn, "ins_test", dbapi_module=mock_mod(i[0]))
+            conn.cursor.assert_called_once_with()
+            calls = []
+            for j in self.sf_all_types:
+                if i[0] == 'named' or i[0] == 'pyformat':
+                    calls.append(mock.call(i[1],j))
+                else:
+                    calls.append(mock.call(i[1],j.values()))
+            curs.execute.assert_has_calls(calls, any_order=False)
+            self.assertEquals(curs.execute.call_count, len(self.sf_all_types))
+            conn.commit.assert_called_once_with()
+            curs.close.assert_called_once_with()
+
+            conn.reset_mock()
+            curs.reset_mock()
 
 if __name__ == "__main__":
 

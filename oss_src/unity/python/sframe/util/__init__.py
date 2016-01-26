@@ -837,7 +837,7 @@ def get_server_log_location():
     return get_log_location()
 
 def get_module_from_object(obj):
-    mod_str = _os.path.splitext(obj.__class__.__module__)[0]
+    mod_str = obj.__class__.__module__.split('.')[0]
     return _sys.modules[mod_str]
 
 def infer_dbapi2_types(cursor):

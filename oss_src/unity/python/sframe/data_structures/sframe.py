@@ -2087,27 +2087,37 @@ class SFrame(object):
         c.close()
         return cls
 
-    def to_sql(self, conn, table_name):
+    @staticmethod
+    def _get_global_dbapi_info(module):
+        return {
+                'paramstyle': module.paramstyle,
+                'apilevel'  : module.apilevel,
+               }
+
+    def to_sql(self, conn, table_name, dbapi_module=None, use_python_type_specifiers=False):
         """
         """
-        format_all_s = True
         c = conn.cursor()
-        mod = get_module_from_object(conn)
+        if dbapi_module is None:
+            dbapi_module = get_module_from_object(conn)
+
+        mod_info = self._get_global_dbapi_info(dbapi_module)
+
         col_info = zip(self.column_names(), self.column_types())
 
-        if format_all_s:
+        if not use_python_type_specifiers:
             pytype_to_printf = lambda x: 's'
 
         # DBAPI2 standard allows for five different ways to specify parameters
         sql_param = {
             'qmark'   : lambda name,col_num,col_type: '?',
-            'numeric' : lambda name,col_num,col_type:':'+str(col_num),
+            'numeric' : lambda name,col_num,col_type:':'+str(col_num+1),
             'named'   : lambda name,col_num,col_type:':'+str(name),
             'format'  : lambda name,col_num,col_type:'%'+pytype_to_printf(col_type),
             'pyformat': lambda name,col_num,col_type:'%('+str(name)+')'+pytype_to_printf(col_type),
             }
 
-        get_sql_param = sql_param[mod.paramstyle]
+        get_sql_param = sql_param[mod_info['paramstyle']]
         
         # form insert string
         ins_str = "INSERT INTO " + str(table_name) + " VALUES ("
@@ -2120,7 +2130,8 @@ class SFrame(object):
         ins_str += ")"
 
         # Some formats require values in an iterable, some a dictionary
-        if (mod.paramstyle == 'named' or mod.paramstyle == 'pyformat'):
+        if (mod_info['paramstyle'] == 'named' or\
+            mod_info['paramstyle'] == 'pyformat'):
           prepare_sf_row = lambda x:x
         else:
           prepare_sf_row = lambda x:x.values()
