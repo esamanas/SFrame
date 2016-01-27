@@ -210,6 +210,59 @@ def load_sframe(filename):
     sf = SFrame(data=filename)
     return sf
 
+def _get_global_dbapi_info(dbapi_module, conn):
+    """
+    Fetches all needed information from the top-level DBAPI module,
+    guessing at the module if it wasn't passed as a parameter. Returns a
+    dictionary of all the needed variables. This is put in one place to
+    make sure the error message is clear if the module "guess" is wrong.
+    """
+    module_given_msg = "The DBAPI2 module given ({0}) is missing the global\n"+\
+    "variable '{1}'. Please make sure you are supplying a module that\n"+\
+    "conforms to the DBAPI 2.0 standard (PEP 0249)."
+    module_not_given_msg = "Hello! I gave my best effort to find the\n"+\
+    "top-level module that the connection object you gave me came from.\n"+\
+    "I found '{0}' which doesn't have the global variable '{1}'.\n"+\
+    "To avoid this confusion, you can pass the module as a parameter using\n"+\
+    "the 'dbapi_module' argument to either from_sql or to_sql."
+
+    if dbapi_module is None:
+        dbapi_module = get_module_from_object(conn)
+        module_given = False
+    else:
+        module_given = True
+
+    module_name = dbapi_module.__name__ if hasattr(dbapi_module, '__name__') else None
+
+    needed_vars = ['apilevel','paramstyle','DATETIME','NUMBER','ROWID']
+    ret_dict = {}
+
+    for i in needed_vars:
+        try:
+            tmp = eval("dbapi_module."+i)
+        except AttributeError as e:
+            if module_given:
+                raise AttributeError(module_given_msg.format(module_name, i))
+            else:
+                raise AttributeError(module_not_given_msg.format(module_name, i))
+        ret_dict[i] = tmp
+
+    try:
+        if ret_dict['apilevel'][0:3] != "2.0":
+            raise NotImplementedError("Unsupported API version " +\
+              str(ret_dict['apilevel']) + ". Only DBAPI 2.0 is supported.")
+    except TypeError as e:
+        e.message = "Module's 'apilevel' value is invalid."
+        raise e
+
+    acceptable_paramstyles = ['qmark','numeric','named','format','pyformat']
+    try:
+        if ret_dict['paramstyle'] not in acceptable_paramstyles:
+            raise TypeError("Module's 'paramstyle' value is invalid.")
+    except TypeError as e:
+        raise TypeError("Module's 'paramstyle' value is invalid.")
+
+    return ret_dict
 
 class SFrame(object):
     """
@@ -2049,33 +2102,50 @@ class SFrame(object):
             glconnect.get_client().set_log_progress(True)
 
     @classmethod
-    def from_sql(cls, conn, sql_statement, params=None, num_cache_rows=100, dbapi_module=None):
+    def from_sql(cls, conn, sql_statement, params=None, num_cache_rows=100,
+        dbapi_module=None, column_type_hints=None):
         """
-        The DOXX!!!
         """
-        # TODO: Make sure errors related to finding dbapi module are clear!!
+        mod_info = _get_global_dbapi_info(dbapi_module, conn)
+
         from .sframe_builder import SFrameBuilder
+
         c = conn.cursor()
         c.execute(sql_statement, params)
         result_desc = c.description
         result_names = [i[0] for i in result_desc]
+        col_name_to_num = {result_names[i]:i for i in range(len(result_names))}
         result_types = [None for i in result_desc]
+        if column_type_hints is not None:
+            if type(column_type_hints) is dict:
+                for k,v in column_type_hints.iteritems():
+                    result_types[col_name_to_num[k]] = v
+            elif type(column_type_hints) is list:
+                if len(column_type_hints) != len(result_names):
+                    __LOGGER__.warn("If column_type_hints is specified as a "+\
+                        "list, it must be of the same size as the result "+\
+                        "set's number of columns. Ignoring (use dict instead).")
+                else:
+                    result_types = column_type_hints
+            elif type(column_type_hints) is type:
+                result_types = [column_type_hints for i in result_desc]
+
         temp_vals = []
 
-        for row in c:
-            #TODO: Will this break if the connector returns a dict for a row?
-            temp_vals.append(row)
-            val_count = 0
-            for val in row:
-                if result_types[val_count] is None and val is not None:
-                    result_types[val_count] = type(val)
-                val_count += 1
-            if all(result_types) or len(temp_vals) >= num_cache_rows:
-                break
+        if not all(result_types):
+            for row in c:
+                #TODO: Will this crash if the connector returns a dict for a row?
+                temp_vals.append(row)
+                val_count = 0
+                for val in row:
+                    if result_types[val_count] is None and val is not None:
+                        result_types[val_count] = type(val)
+                    val_count += 1
+                if all(result_types) or len(temp_vals) >= num_cache_rows:
+                    break
 
         if not all(result_types):
-            inferred_types = infer_dbapi2_types(c, dbapi_module)
-            print inferred_types
+            inferred_types = infer_dbapi2_types(c, mod_info)
             cnt = 0
             for i in result_types:
                 if i is None:
@@ -2089,21 +2159,11 @@ class SFrame(object):
         c.close()
         return cls
 
-    @staticmethod
-    def _get_global_dbapi_info(module):
-        return {
-                'paramstyle': module.paramstyle,
-                'apilevel'  : module.apilevel,
-               }
-
     def to_sql(self, conn, table_name, dbapi_module=None, use_python_type_specifiers=False):
         """
         """
+        mod_info = _get_global_dbapi_info(dbapi_module, conn)
         c = conn.cursor()
-        if dbapi_module is None:
-            dbapi_module = get_module_from_object(conn)
-
-        mod_info = self._get_global_dbapi_info(dbapi_module)
 
         col_info = zip(self.column_names(), self.column_types())
 

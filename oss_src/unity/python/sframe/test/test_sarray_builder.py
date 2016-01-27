@@ -55,48 +55,6 @@ class SArrayBuilderTest(unittest.TestCase):
             sb = SArrayBuilder(dtype=i[1])
             self.__test_append_multiple(sb, i[0], i[1])
 
-    def test_type_inference(self):
-        # Make sure type inference is the default behavior
-        sb = SArrayBuilder()
-
-        # int should be moved to float
-        sb.append(None)
-        self.assertEquals(sb.get_type(), type(None))
-        sb.append(1)
-        self.assertEquals(sb.get_type(), int)
-        sb.append(1.0)
-        self.assertEquals(sb.get_type(), float)
-
-        # Error happens on append, not close
-        with self.assertRaises(RuntimeError):
-            sb.append("hello")
-
-        # Make sure everything is still functional after error, and the errant
-        # value is skipped
-        sa = sb.close()
-        self.__test_equal(sa, [None, 1.0, 1.0], float)
-
-        # array should be bumped to list
-        sb = SArrayBuilder()
-        sb.append(array.array('l',[1,2,3]))
-        self.assertEquals(sb.get_type(), array.array)
-        sb.append([1,2,3])
-        self.assertEquals(sb.get_type(), array.array)
-        sb.append(["hi",1])
-        self.assertEquals(sb.get_type(), list)
-
-        # Test the types that worked earlier now do not work
-        with self.assertRaises(RuntimeError):
-            sb.append(1)
-        with self.assertRaises(RuntimeError):
-            sb.append(1.2)
-
-        with self.assertRaises(RuntimeError):
-            sb.append("hello")
-
-        sa = sb.close()
-        self.__test_equal(sa, [[1.0,2.0,3.0],[1.0,2.0,3.0],["hi",1]], list)
-
     def test_history(self):
         sb = SArrayBuilder(history_size=10)
         sb.append_multiple((i for i in xrange(8)))

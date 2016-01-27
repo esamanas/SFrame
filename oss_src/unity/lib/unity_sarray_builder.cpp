@@ -48,14 +48,13 @@ void unity_sarray_builder::append(const flexible_type &val, size_t segment) {
       in_type != flex_type_enum::UNDEFINED) {
     auto ins_ret = m_types_inserted.insert(in_type);
     if(ins_ret.second) {
-      try {
-        m_ary_type = get_common_type(m_types_inserted);
-      } catch(std::string &e) {
+      if(m_types_inserted.size() > 1) {
         m_types_inserted.erase(ins_ret.first);
         log_and_throw(std::string("Append failed: ") +
             flex_type_enum_to_name(in_type) + std::string(" type is "
               "incompatible with types of existing values in this SArray."));
       }
+      m_ary_type = in_type;
     }
   }
 
