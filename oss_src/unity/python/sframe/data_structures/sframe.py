@@ -2070,11 +2070,12 @@ class SFrame(object):
                 if result_types[val_count] is None and val is not None:
                     result_types[val_count] = type(val)
                 val_count += 1
-            if all(result_types) or len(temp_vals) > num_cache_rows:
+            if all(result_types) or len(temp_vals) >= num_cache_rows:
                 break
 
         if not all(result_types):
             inferred_types = infer_dbapi2_types(c, dbapi_module)
+            print inferred_types
             cnt = 0
             for i in result_types:
                 if i is None:

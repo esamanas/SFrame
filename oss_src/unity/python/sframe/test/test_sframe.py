@@ -3061,14 +3061,31 @@ class SFrameTest(unittest.TestCase):
         conn = mock_conn('example.db')
         curs = mock_cursor()
         conn.cursor.return_value = curs
-        curs.description = (('X1',None),('X2',None),('X3',None))
-        curs.__iter__.return_value = zip(*self.all_type_cols[0:3]).__iter__()
+        sf_type_codes = [44,44,41,22,114,199,43]
+        sf_data = zip(*self.all_type_cols)
+        curs.description = [['X'+str(i+1),sf_type_codes[i]]+[None for j in range(5)] for i in range(len(sf_data[0]))]
+        print curs.description
+        print sf_data
+        curs.__iter__.return_value = sf_data.__iter__()
 
         sf = SFrame.from_sql(conn, "SELECT * FROM test_table", num_cache_rows=5, dbapi_module=mock_mod())
+        #_assert_sframe_equal(sf, self.sf_all_types)
 
+        none_col = [None for i in range(5)]
+        nones_in_cache = zip(*[none_col for i in range(len(sf_data[0]))])
+        test_data = (nones_in_cache+sf_data)
+        print test_data
+        curs.__iter__.return_value = test_data.__iter__()
+
+
+        sf = SFrame.from_sql(conn, "SELECT * FROM test_table", num_cache_rows=5, dbapi_module=mock_mod())
+        sf_inferred_types = SFrame()
+        expected_types = [float,float,str,str,str,str,dt.datetime]
+        for i in zip(self.sf_all_types.column_names(),expected_types):
+            sf_inferred_types.add_column(self.sf_all_types[i[0]].astype(i[1]))
         print sf
-
-
+        _assert_sframe_equal(sf[5:], sf_inferred_types)
+        print sf.column_types()
 
     @mock.patch(__name__+'.sqlite3.Cursor', spec=True)
     @mock.patch(__name__+'.sqlite3.Connection', spec=True)

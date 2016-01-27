@@ -856,13 +856,17 @@ def infer_dbapi2_types(cursor, dbapi2_module=None):
     # Ugly nested loop because the standard only guarantees that a type code
     # will compare equal to the module-defined types
     for i in result_set_types:
+        done_early = False
         for j in dbapi2_to_python:
             if i is None:
+                done_early = True
                 break
             elif i == j[0]:
                 ret_types.append(j[1])
+                done_early = True
                 break 
-        ret_types.append(str)
+        if not done_early:
+            ret_types.append(str)
 
     return ret_types
 
