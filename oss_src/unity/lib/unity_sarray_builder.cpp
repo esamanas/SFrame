@@ -11,7 +11,6 @@
 
 namespace graphlab {
 
-//TODO: Add a hint for the size?
 void unity_sarray_builder::init(size_t num_segments, size_t history_size, flex_type_enum dtype) {
   if(m_inited)
     log_and_throw("This sarray_builder has already been initialized!");
@@ -48,6 +47,8 @@ void unity_sarray_builder::append(const flexible_type &val, size_t segment) {
       in_type != flex_type_enum::UNDEFINED) {
     auto ins_ret = m_types_inserted.insert(in_type);
     if(ins_ret.second) {
+      // Not allowed to change types in the middle of appending (except from
+      // UNDEFINED)
       if(m_types_inserted.size() > 1) {
         m_types_inserted.erase(ins_ret.first);
         log_and_throw(std::string("Append failed: ") +

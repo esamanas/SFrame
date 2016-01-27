@@ -27,6 +27,10 @@ class unity_sarray_builder: public unity_sarray_builder_base {
   void append_multiple(const std::vector<flexible_type> &vals, size_t segment);
 
   flex_type_enum get_type();
+
+  /**
+   * Return the last `num_elems` elements appended.
+   */
   std::vector<flexible_type> read_history(size_t num_elems);
   std::shared_ptr<unity_sarray_base> close();
  private:

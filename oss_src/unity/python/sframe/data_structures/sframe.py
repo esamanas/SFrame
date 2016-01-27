@@ -2102,9 +2102,70 @@ class SFrame(object):
             glconnect.get_client().set_log_progress(True)
 
     @classmethod
-    def from_sql(cls, conn, sql_statement, params=None, num_cache_rows=100,
+    def from_sql(cls, conn, sql_statement, params=None, type_inference_rows=100,
         dbapi_module=None, column_type_hints=None):
         """
+        Convert the result of a SQL database query to an SFrame.
+
+        Parameters
+        ----------
+        conn : dbapi2.Connection
+          A DBAPI2 connection object. Any connection object originating from
+          the 'connect' method of a DBAPI2-compliant package can be used.
+
+        sql_statement : str
+          The query to be sent to the database through the given connection.
+          No checks are performed on the `sql_statement`. Any side effects from
+          the query will be reflected on the database.  If no result rows are
+          returned, an empty SFrame is created.
+
+        params : iterable | dict, optional
+          Parameters to substitute for any parameter markers in the
+          `sql_statement`. Be aware that the style of parameters may vary
+          between different DBAPI2 packages.
+
+        type_inference_rows : int, optional
+          The maximum number of rows to use for determining the column types of
+          the SFrame. These rows are held in Python until all column types are
+          determined or the maximum is reached.
+
+        dbapi_module : module | package, optional
+          The top-level DBAPI2 module/package that constructed the given
+          connection object. By default, a best guess of which module the
+          connection came from is made. In the event that this guess is wrong,
+          this will need to be specified.
+
+        column_type_hints : dict | list | type, optional
+          Specifies the types of the output SFrame. If a dict is given, it must
+          have result column names as keys, but need not have all of the result
+          column names. If a list is given, the length of the list must match
+          the number of result columns. If a single type is given, all columns
+          in the output SFrame will be this type. If the result type is
+          incompatible with the types given in this argument, a casting error
+          will occur.
+
+        Returns
+        -------
+        out : SFrame
+
+        Examples
+        --------
+        >>> import sqlite3
+
+        >>> conn = sqlite3.connect('example.db')
+
+        >>> graphlab.SFrame.from_sql(conn, "SELECT * FROM foo")
+        Columns:
+                a       int
+                b       int
+        Rows: 1
+        Data:
+        +---+---+
+        | a | b |
+        +---+---+
+        | 1 | 2 |
+        +---+---+
+        [1 rows x 2 columns]
         """
         mod_info = _get_global_dbapi_info(dbapi_module, conn)
 
@@ -2114,8 +2175,10 @@ class SFrame(object):
         c.execute(sql_statement, params)
         result_desc = c.description
         result_names = [i[0] for i in result_desc]
-        col_name_to_num = {result_names[i]:i for i in range(len(result_names))}
         result_types = [None for i in result_desc]
+
+        # Set any types that are given to us
+        col_name_to_num = {result_names[i]:i for i in range(len(result_names))}
         if column_type_hints is not None:
             if type(column_type_hints) is dict:
                 for k,v in column_type_hints.iteritems():
@@ -2132,18 +2195,25 @@ class SFrame(object):
 
         temp_vals = []
 
+        # Perform type inference by checking to see what python types are
+        # returned from the cursor
         if not all(result_types):
+            # Hmm...an iterable cursor is not *technically* required by the
+            # DBAPI2 standard. Consider switching.
             for row in c:
-                #TODO: Will this crash if the connector returns a dict for a row?
+                # Assumes that things like dicts are not a "single sequence"
                 temp_vals.append(row)
                 val_count = 0
                 for val in row:
                     if result_types[val_count] is None and val is not None:
                         result_types[val_count] = type(val)
                     val_count += 1
-                if all(result_types) or len(temp_vals) >= num_cache_rows:
+                if all(result_types) or len(temp_vals) >= type_inference_rows:
                     break
 
+        # This will be true if some columns have all missing values up to this
+        # point. Try using DBAPI2 type_codes to pick a suitable type. If this
+        # doesn't work, fall back to string.
         if not all(result_types):
             inferred_types = infer_dbapi2_types(c, mod_info)
             cnt = 0
@@ -2161,6 +2231,36 @@ class SFrame(object):
 
     def to_sql(self, conn, table_name, dbapi_module=None, use_python_type_specifiers=False):
         """
+        Convert an SFrame to a single table in a SQL database.
+
+        This function does not attempt to create the table or check if a table
+        named `table_name` exists in the database. It simply assumes that
+        `table_name` exists in the database and appends to it.
+
+        `to_sql` can be thought of as a convenience wrapper around
+        parameterized SQL insert statements.
+
+        Parameters
+        ----------
+        conn : dbapi2.Connection
+          A DBAPI2 connection object. Any connection object originating from
+          the 'connect' method of a DBAPI2-compliant package can be used.
+
+        table_name : str
+          The name of the table to append the data in this SFrame.
+
+        dbapi_module : module | package, optional
+          The top-level DBAPI2 module/package that constructed the given
+          connection object. By default, a best guess of which module the
+          connection came from is made. In the event that this guess is wrong,
+          this will need to be specified.
+
+        use_python_type_specifiers : bool, optional
+          If the DBAPI2 module's parameter marker style is 'format' or
+          'pyformat', attempt to use accurate type specifiers for each value
+          ('s' for string, 'd' for integer, etc.). Many DBAPI2 modules simply
+          use 's' for all types if they use these parameter markers, so this is
+          False by default.
         """
         mod_info = _get_global_dbapi_info(dbapi_module, conn)
         c = conn.cursor()

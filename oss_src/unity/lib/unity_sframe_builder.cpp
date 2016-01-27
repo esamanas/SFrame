@@ -11,7 +11,6 @@
 
 namespace graphlab {
 
-//TODO: Add a hint for the size?
 void unity_sframe_builder::init(size_t num_segments,
                                 size_t history_size,
                                 std::vector<std::string> column_names,
